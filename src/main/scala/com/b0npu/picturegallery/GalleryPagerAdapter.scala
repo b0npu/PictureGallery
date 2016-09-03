@@ -2,8 +2,8 @@ package com.b0npu.picturegallery
 
 import android.content.Context
 import android.support.v4.view.PagerAdapter
-import android.view.{Gravity, View, ViewGroup}
-import android.widget.TextView
+import android.view.{View, ViewGroup}
+import android.widget.ImageView
 
 class GalleryPagerAdapter(context: Context) extends PagerAdapter {
 
@@ -19,14 +19,11 @@ class GalleryPagerAdapter(context: Context) extends PagerAdapter {
 
     val id = galleryArray(position)
 
-    val textView: TextView = new TextView(galleryContext)
-    textView.setText("Page:" + position)
-    textView.setTextSize(30)
-    textView.setTextColor(id)
-    textView.setGravity(Gravity.CENTER)
+    val imageView: ImageView = new ImageView(galleryContext)
+    imageView.setImageResource(id)
 
-    container.addView(textView)
-    textView
+    container.addView(imageView)
+    imageView
   }
 
   override def destroyItem(container: ViewGroup, position: Int, obj: Object): Unit = {
