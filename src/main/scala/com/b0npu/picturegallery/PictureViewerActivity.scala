@@ -50,6 +50,7 @@ class PictureViewerActivity extends AppCompatActivity with TypedFindView {
     * SDカードの画像を読み込んでViewPagerに配置したImageViewに表示する
     * ImageViewへの画像の配置はGalleryPagerAdapter(PagerAdapterを継承したサブクラス)を
     * 使うので画像を格納したGalleryPagerAdapterをViewPagerにセットして画像を表示する
+    * TODO: SDカードに画像が無い場合のエラー処理をしてないので注意
     * TODO: 画像を直接配列に格納しているので画像の枚数が多くなると重くなるかもしれません
     */
   private def viewGalleryPager: Unit = {
