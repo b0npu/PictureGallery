@@ -6,7 +6,7 @@ import android.content.{ContentResolver, ContentUris, DialogInterface, Intent}
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.{Build, Bundle}
+import android.os.Bundle
 import android.provider.{BaseColumns, MediaStore, Settings}
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.PermissionChecker
@@ -20,15 +20,15 @@ class PictureViewerActivity extends AppCompatActivity with TypedFindView {
     *
     * requestPermissionsメソッドで権限を要求した際に
     * コールバックメソッドのonRequestPermissionsResultメソッドに渡す定数を定義
+    * (自クラスで使うだけのフィールドはprivateにして明示的に非公開にしてます)
     */
-  val REQUEST_READ_STORAGE_PERMISSION_CODE: Int = 0x01
+  private val REQUEST_READ_STORAGE_PERMISSION_CODE: Int = 0x01
 
   /**
     * アプリの画面を生成
     *
     * アプリを起動するとonCreateが呼ばれてActivityが初期化される
-    * ビルドターゲットが23(Marshmallow)以上ならM Permissionsの仕組みに準じて
-    * 画像の表示に必要なパーミッション(SDカードのデータの読み込み)を確認する
+    * 画像の表示に必要なパーミッション(SDカードのデータの読み込み)を確認して
     * パーミッションが許可されていない場合はrequestReadStoragePermissionメソッドで
     * パーミッションの許可を要求する
     * パーミッションが許可されていればviewGalleryPagerメソッドで画像を表示する
@@ -36,22 +36,25 @@ class PictureViewerActivity extends AppCompatActivity with TypedFindView {
   override def onCreate(savedInstanceState: Bundle): Unit = {
     super.onCreate(savedInstanceState)
 
-    if (Build.VERSION.SDK_INT >= 23) {
-
-      if (PermissionChecker.checkSelfPermission(PictureViewerActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)
-        != PackageManager.PERMISSION_GRANTED) {
-        requestReadStoragePermission
-      } else {
-        viewGalleryPager
-      }
+    if (PermissionChecker.checkSelfPermission(PictureViewerActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)
+      != PackageManager.PERMISSION_GRANTED) {
+      requestReadStoragePermission
+    } else {
+      viewGalleryPager
     }
   }
 
-  /** viewGalleryPagerメソッドの定義
+  /**
+    * viewGalleryPagerメソッドの定義
     *
+    * SDカードの画像を読み込んでViewPagerに配置したImageViewに表示する
+    * ImageViewへの画像の配置はGalleryPagerAdapter(PagerAdapterを継承したサブクラス)を
+    * 使うので画像を格納したGalleryPagerAdapterをViewPagerにセットして画像を表示する
+    * TODO: 画像を直接配列に格納しているので画像の枚数が多くなると重くなるかもしれません
     */
   private def viewGalleryPager: Unit = {
 
+    /* ViewPagerはインスタンスの生成の代わりにレイアウトXMLに記述する方法でも良い */
     val galleryPager = new ViewPager(PictureViewerActivity.this)
     val galleryPagerAdapter = new GalleryPagerAdapter(PictureViewerActivity.this)
 
@@ -60,16 +63,19 @@ class PictureViewerActivity extends AppCompatActivity with TypedFindView {
     val mediaContentResolver: ContentResolver = getContentResolver
     val pictureCursor: Cursor = mediaContentResolver.query(imageMediaStoreUri, null, null, null, null)
 
-    /* Cursorに格納した画像データの検索結果から1枚目の画像のIDを取得する */
+    /* Cursorに格納した画像データの検索結果の先頭から順に画像を取得しGalleryPagerAdapterに格納する */
     pictureCursor.moveToFirst
     do {
-      val pictureId = pictureCursor.getLong(pictureCursor.getColumnIndex(BaseColumns._ID)).asInstanceOf[Int]
       /* 画像データのURIとIDから画像(ビットマップ画像)を取得する */
+      val pictureId = pictureCursor.getLong(pictureCursor.getColumnIndex(BaseColumns._ID)).asInstanceOf[Int]
       val bmpImageUri: Uri = ContentUris.withAppendedId(imageMediaStoreUri, pictureId)
       val bmpImage: Bitmap = MediaStore.Images.Media.getBitmap(mediaContentResolver, bmpImageUri)
+
       galleryPagerAdapter.addPicture(bmpImage)
+
     } while (pictureCursor.moveToNext)
 
+    /* 画像を配置したViewPagerをレイアウトに設置して画面に画像を表示する */
     galleryPager.setAdapter(galleryPagerAdapter)
     setContentView(galleryPager)
   }
@@ -148,12 +154,12 @@ class PictureViewerActivity extends AppCompatActivity with TypedFindView {
         /* パーミッションの要求が拒否されていた場合はダイアログに表示する */
         if (grantResults.length != 1 || grantResults(0) != PackageManager.PERMISSION_GRANTED) {
 
-          /* 「今後は確認しない」が選択されていなければ許可が必要な理由を説明する */
+          /* 「今後は確認しない」が選択されていなければ再度パーミッションの許可を要求する */
           if (ActivityCompat.shouldShowRequestPermissionRationale(PictureViewerActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
 
             new AlertDialog.Builder(PictureViewerActivity.this)
               .setTitle("パーミッション取得エラー")
-              .setMessage("再取得する場合は再度Requestボタンを押して下さい")
+              .setMessage("画像の表示に必要なパーミッションが取得できませんでした")
               .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener {
 
                 override def onClick(dialogInterface: DialogInterface, i: Int): Unit = {
